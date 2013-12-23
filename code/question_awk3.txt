@@ -1,7 +1,0 @@
-Ian Bicking
-Hakim El Hattab
-Paul Irish
-Addy Osmani
-Chris Wanstrath
-Mattt Thompson
-Ask Solem Hoel

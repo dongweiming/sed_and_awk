@@ -1,2 +1,0 @@
-/^root/ p
-/^nobody/ p

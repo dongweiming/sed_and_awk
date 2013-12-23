@@ -1,3 +1,0 @@
-1 echo "This is 123"|sed "s/[0-9]\{3\}/[&]/"
-4 echo "This is UPPER"|/usr/local/bin/sed "s/\(.*\) \(.*\) \(.*\)/\U\2,\E\u\1,\E\L\3/"
-6 sed -n '1!G;h;$p'

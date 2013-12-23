@@ -1,7 +1,0 @@
-101,Ian Bicking,Mozilla,1204
-102,Hakim El Hattab,Whim,4029
-103,Paul Irish,Google,7200
-104,Addy Osmani,Google,2201
-105,Chris Wanstrath,Github,1002
-106,Mattt Thompson,Heroku,890
-107,Ask Solem Hoel,VMware,2109
