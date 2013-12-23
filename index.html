@@ -1,0 +1,1534 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>sed & awk</title>
+
+		<meta name="description" content="2012年工作总结">
+		<meta name="author" content="Dongweiming">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/default.css" id="theme">
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<div class="slides">
+
+				<section>
+					<p><span class="dongwmhead dongwmmenu">sed & awk</span></p>
+					</br> 
+					</br>
+					<p class="dongwmright">姓名：<a href="#">董伟明</a></p>
+					<p class="dongwmright">日期：<a href="#"><font face="comic sans ms">2013-12-09</font></a></p>
+					
+				</section>
+
+				<section>
+					<h2 class="dongwmtitle dongwmgreen dongwmcsm">(一)sed</h2>
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen">学完本章的后果</h2>
+					<ol>
+						<li class="fragment dongwmcsm">把123变成[123](不要sed "s/\([0-9]\{3\}\)/[\1]/")</li>
+						<li class="fragment dongwmcsm">这是什么意思: echo "1\n2\n3"|sed -n "/2/, +2p"</li>
+						<li class="fragment dongwmcsm">这是什么意思: echo "1\n2\n3"|sed '2 c 4' (gnu sed)</li>
+						<li class="fragment dongwmcsm">把This is UPPER变成IS,This,upper(gnu sed)</li>
+						<li class="fragment dongwmcsm">这是什么意思: sed 'H;x;s/^\(.*\)\n\(.*\)/\2\1/'</li>
+						<li class="fragment dongwmcsm">实现tac命令的功能</li>
+					</ol>
+				</section>
+				<section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">语法1</h2>
+						<pre><code contenteditable>
+sed [options] {sed-commands} {input-file}
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# -n表示取消默认输出,p表示打印行
+$sed -n 'p' /etc/passwd
+# 只打印第三行
+$sed -n '3p' /etc/passwd
+# 打印1，3行
+$sed -n '1,3p' /etc/passwd
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">语法2</h2>
+						<pre><code contenteditable>
+$sed [options] -f {sed-commands-in-a-file} {input-file}
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 打印以root开头或者nobody开头的行
+$cat sed_example_1.sed
+/^root/ p
+/^nobody/ p
+
+$ sed -n -f sed_example_1.sed /etc/passwd
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">语法3</h2>
+						<pre><code contenteditable>
+sed [options] -e {sed-command-1} -e {sed-command-2} {input-file}
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 打印以root开头或者nobody开头的行
+$sed -n -e '/^root/ p' -e '/^nobody/ p' /etc/passwd
+
+#或者
+$sed -n \
+-e '/^root/ p' \
+-e '/^nobody/ p' \
+/etc/passwd
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">语法4</h2>
+						<pre><code contenteditable>
+sed [options] '{
+sed-command-1
+sed-command-2
+}' input-file
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 打印以root开头或者nobody结尾的行
+sed -n '{
+/^root/ p
+/nobody$/ p
+}' /etc/passwd
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">sed流</h2>
+					</br>
+						<ol>
+							<li class="fragment highlight-blue">读</li>
+							<li class="fragment highlight-blue">执行</li>
+							<li class="fragment highlight-blue">打印</li>
+							<li class="fragment highlight-blue">重复</li>
+						</ol>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">源文件</h2>
+						<pre><code contenteditable>
+101,Ian Bicking,Mozilla
+102,Hakim El Hattab,Whim
+103,Paul Irish,Google
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">范围</h2>
+						<pre><code contenteditable>
+# 在freebsd版sed不能用
+$/usr/local/bin/sed -n '1~2 p' source.txt 
+101,Ian Bicking,Mozilla
+103,Paul Irish,Google
+105,Chris Wanstrath,Github
+107,Ask Solem Hoel,VMware
+
+# 在freebsd版sed不能用
+$/usr/local/bin/sed -n '2~3 p' source.txt 
+102,Hakim El Hattab,Whim
+105,Chris Wanstrath,Github
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">模式匹配</h2>
+						<pre><code contenteditable>
+# 寻找包含Paul的行
+$sed -n '/Paul/ p' source.txt
+103,Paul Irish,Google
+# 从第一行开始到第五行, 从找到开始打印到第五行
+$sed -n '/Paul/,5 p' source.txt
+103,Paul Irish,Google
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+
+# 从匹配Paul行打印达匹配Addy的行
+$sed -n '/Paul/,/Addy/ p' source.txt
+103,Paul Irish,Google
+104,Addy Osmani,Google
+# 在freebsd版sed不能用 匹配Paul行再多输出2行
+$/usr/local/bin/sed -n '/Paul/,+2 p' source.txt
+103,Paul Irish,Google
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">删除行</h2>
+						<pre><code contenteditable>
+# 删除所有行
+$sed 'd' source.txt 
+# 只删除第二行
+$sed '2 d' source.txt 
+...
+# 删除第一到第四行
+$sed '1,4 d' source.txt
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+# 删除奇数行
+$/usr/local/bin/sed '1~2 d' source.txt
+102,Hakim El Hattab,Whim
+104,Addy Osmani,Google
+106,Mattt Thompson,Heroku
+# 删除符合Paul到Addy的行
+$sed '/Paul/,/Addy/, d' source.txt
+102,Hakim El Hattab,Whim
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+# 删除空行
+$sed '/^$/ d' source.txt
+# 删除评论行
+$sed '/^#/ d' source.txt
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">重定向</h2>
+						<pre><code contenteditable>
+# 将source.txt内容重定向写到output.txt
+$sed 'w output.txt' source.txt
+# 和上面一样,但是没有在终端显示
+$sed -n 'w output.txt' source.txt
+# 只写第二行
+$ sed -n '2 w output.txt' source.txt
+# 写一到四行到output.txt
+$sed -n '1,4 w output.txt'
+# 写匹配Ask的行到结尾行到output.txt
+$sed -n '/Ask/,$ w output.txt'
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">替换</h2>
+						<pre><code contenteditable>
+sed '[address-range|pattern-range] s/original-
+string/replacement-string/[substitute-flags]' inputfile
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 替换Google为Github
+$sed 's/Google/Github/' source.txt
+101,Ian Bicking,Mozilla
+102,Hakim El Hattab,Whim
+103,Paul Irish,Github
+104,Addy Osmani,Github
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+# 替换匹配Addy的行里面的Google为Github
+$sed '/Addy/s/Google/Github/' source.txt
+101,Ian Bicking,Mozilla
+102,Hakim El Hattab,Whim
+103,Paul Irish,Google
+104,Addy Osmani,Github
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+# 默认s只会替换一行中的第一个匹配项
+$sed '1s/a/A/'  source.txt|head -1
+101,IAn Bicking,Mozilla
+# g可以替换每行的全部符合
+$sed '1s/a/A/g'  source.txt|head -1
+101,IAn Bicking,MozillA
+# 可以直接指定想要替换的第N个匹配项,这里是第二个
+$sed '1s/a/A/2'  source.txt|head -1
+101,Ian Bicking,MozillA
+# 使用w将能够替换的行重定向写到output.txt
+$sed -n 's/Mozilla/Github/w output.txt' source.txt
+$cat output.txt 
+101,Ian Bicking,Github
+# 还可以使用i忽略匹配的大小写,看来freebsd的不能用
+$/usr/local/bin/sed '1s/ian/IAN/i'  source.txt|head -1
+101,IAN Bicking,Mozilla
+# 这里有个新的文件
+$cat files.txt 
+/etc/passwd
+/etc/group
+# 给每行前和后都添加点字符
+$sed 's/\(.*\)/ls -l \1|head -1/' files.txt
+ls -l /etc/passwd|head -1
+ls -l /etc/group|head -1
+# 我要用sed执行这个字符串命令了 无奈..mac上得sed都不行
+dongwm@bj-social-201:~$ sed 's/^/ls -l /e' files.txt
+-rw-r--r-- 1 root root 1627 Oct 14 14:30 /etc/passwd
+-rw-r--r-- 1 root root 807 Oct 14 14:30 /etc/group
+# sed分隔符不只可以使用'/'
+$sed 's|/usr/local/bin|/usr/bin|' path.txt
+$sed 's^/usr/local/bin^/usr/bin^' path.txt
+$sed 's@/usr/local/bin@/usr/bin@' path.txt
+$sed 's!/usr/local/bin!/usr/bin!' path.txt
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">替换覆盖</h2>
+						<pre><code contenteditable>
+sed '{
+quote> s/Google/Github/
+quote> s/Git/git/ 
+quote> }' source.txt 
+101,Ian Bicking,Mozilla
+102,Hakim El Hattab,Whim
+103,Paul Irish,github
+104,Addy Osmani,github
+105,Chris Wanstrath,github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">神奇的&</h2>
+						<pre><code contenteditable>
+$sed 's/^[0-9][0-9][0-9]/[&]/g'
+[101],Ian Bicking,Mozilla
+[102],Hakim El Hattab,Whim
+[103],Paul Irish,Google
+[104],Addy Osmani,Google
+[105],Chris Wanstrath,Github
+[106],Mattt Thompson,Heroku
+[107],Ask Solem Hoel,VMware
+$sed 's/^.*/<\&>/' source.txt 
+<101,Ian Bicking,Mozilla>
+<102,Hakim El Hattab,Whim>
+<103,Paul Irish,Google>
+<104,Addy Osmani,Google>
+<105,Chris Wanstrath,Github>
+<106,Mattt Thompson,Heroku>
+<107,Ask Solem Hoel,VMware>
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">正则</h2>
+						<pre><code contenteditable>
+# ^表示匹配以什么开头
+$sed -n '/^101/ p' source.txt      
+101,Ian Bicking,Mozilla
+# $表示匹配以什么结尾
+$sed -n '/Github$/ p' source.txt 
+105,Chris Wanstrath,Github
+# .表示单个字符,下面的匹配一个逗号然后I然后2个单字符
+$sed -n '/,I../ p' source.txt
+101,Ian Bicking,Mozilla
+# *表示匹配0个或者多个, \+表示匹配一个或者多个, \?表示匹配0个或者1个
+# [0-9]表示匹配数字,下面匹配包含3或者4的行
+$sed -n '/[34]/ p ' source.txt      
+103,Paul Irish,Google
+104,Addy Osmani,Google
+# -表示范围,这里匹配3,4,5
+$sed -n '/[3-5]/ p ' source.txt
+103,Paul Irish,Google
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+# |表示或者的关系
+$/usr/local/bin/sed -n '/102\|103/ p ' source.txt
+102,Hakim El Hattab,Whim
+103,Paul Irish,Google
+# 看一个文件
+$cat numbers.txt 
+1
+12
+123
+1234
+12345
+123456
+# {m} 表示前面的匹配的重复次数
+$sed -n '/^[0-9]\{5\}$/ p' numbers.txt
+12345
+#{m,n } 表示匹配m-n的次数都算
+sed -n '/^[0-9]\{3,5\}$/ p' numbers.txt
+123
+1234
+12345
+# 删除所有注释行和空行
+$sed -e 's/#.*//' -e '/^$/ d' /etc/profile							
+# 转化windows文件到unix格式
+$sed 's/.$//' filename								
+							
+#\1表示第一个正则匹配到的数据
+$sed 's/\([^,]*\).*/\1/g' source.txt |head -1
+101
+#给每个单词第一个字母加括号
+$echo "Dong Wei Ming" | /usr/local/bin/sed 's/\(\b[A-Z]\)/\(\1\)/g'
+(D)ong (W)ei (M)ing
+$/usr/local/bin/sed 's/\(^\|[^0-9.]\)\([0-9]\+\)\([0-9]\{3\}\)/\1\2,\3/g' numbers.txt
+1
+12
+123
+1,234
+12,345
+123,456
+# 只取第一和第三列,并且换了他们的位置
+$sed 's/\([^,]*\),\([^,]*\),\([^,]*\).*/\3,\1/g' source.txt
+Mozilla,101
+Whim,102
+Google,103
+Google,104
+Github,105
+Heroku,106
+VMware,107
+
+						</code></pre>
+					</section>
+				</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">Gnu sed</h2>
+						<pre><code contenteditable>
+# \l能将后面的一个字符变成小写
+$sed 's/Ian/IAN/' source.txt|head -1               
+101,IAN Bicking,Mozilla
+$/usr/local/bin/sed 's/Ian/IA\lN/' source.txt|head -1 
+101,IAn Bicking,Mozilla
+# \L能将后面的字符都变成小写
+$/usr/local/bin/sed 's/Ian/I\LAN/' source.txt|head -1
+101,Ian Bicking,Mozilla
+# \u能将后面的一个字符变成大写
+$/usr/local/bin/sed 's/Ian/IA\un/' source.txt|head -1
+101,IAN Bicking,Mozilla
+# \U能将后面的字都变成大写
+$/usr/local/bin/sed 's/Ian/\Uian/' source.txt|head -1 
+101,IAN Bicking,Mozilla
+# \E能打断\L或者\U改变大小写
+$/usr/local/bin/sed 's/Ian/\Uia\En/' source.txt|head -1
+101,IAn Bicking,Mozilla
+# 使用以上功能:调换前2列,把名字列全部大写,公司列全部小写
+$/usr/local/bin/sed 's/\([^,]*\),\([^,]*\),\(.*\).*/\U\2\E,\1,\L\3/g' source.txt
+IAN BICKING,101,mozilla
+HAKIM EL HATTAB,102,whim
+PAUL IRISH,103,google
+ADDY OSMANI,104,google
+CHRIS WANSTRATH,105,github
+MATTT THOMPSON,106,heroku
+ASK SOLEM HOEL,107,vmware
+
+
+
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">sed可执行脚本</h2>
+						<pre><code contenteditable>
+$cat testscript.sed
+#!/usr/bin/sed -nf
+/root/ p
+/nobody/ p
+$chmod u+x testscript.sed
+$/testscript.sed /etc/passwd 
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+daemon:*:1:1:System Services:/var/root:/usr/bin/false
+_cvmsroot:*:212:212:CVMS Root:/var/empty:/usr/bin/false
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">sed修改源文件和备份</h2>
+						<pre><code contenteditable>
+							#-i会修改源文件,但是可以同时使用bak备份
+$sed -ibak 's/Ian/IAN/' source.txt 
+# or
+sed --in-place=bak 's/Ian/IAN/' source.txt 
+# 这样会存在一个文件source.txtbak
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">行后增加语法</h2>
+						<pre><code contenteditable>
+sed '[address] a the-line-to-append' input-file
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+$/usr/local/bin/sed '2 a 108,Donald Stufft, Nebula' source.txt
+101,IAN Bicking,Mozilla
+102,Hakim El Hattab,Whim
+108,Donald Stufft, Nebula
+103,Paul Irish,Google
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">行前插入语法</h2>
+						<pre><code contenteditable>
+sed '[address] i the-line-to-insert' input-file
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+$/usr/local/bin/sed '2 i 108,Donald Stufft, Nebula' source.txt
+101,IAN Bicking,Mozilla
+108,Donald Stufft, Nebula
+102,Hakim El Hattab,Whim
+103,Paul Irish,Google
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">修改行语法</h2>
+						<pre><code contenteditable>
+sed '[address] c the-line-to-insert' input-file
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+							# 修改符合Paul行为...
+$/usr/local/bin/sed '/Paul/ c 108,Donald Stufft, Nebula' source.txt
+101,IAN Bicking,Mozilla
+102,Hakim El Hattab,Whim
+108,Donald Stufft, Nebula
+104,Addy Osmani,Google
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">sed其他</h2>
+						<pre><code contenteditable>
+							# -l会显示隐藏字符比如'\t', = 可以显示行号
+							$sed -l = source.txt
+							# y或翻译你要转换的字符,这里I会转化成i，B转换成b
+							$sed 'y/IB/ib/' source.txt |head -1
+							101,iAN bicking,Mozilla
+							
+						</code></pre>
+					</section>
+				<section>
+					<h2 class="dongwmtitle dongwmgreen dongwmcsm">(二)Sed高级话题</h2>
+					<small><h3 class="dongwmblue">保持空间和模式空间</h3></small>
+				</section>
+				<section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">源码</h2>
+						<pre><code contenteditable>
+#先看一个文件
+$cat source2.txt 
+Ian Bicking
+Mozilla
+Hakim El Hattab
+Whim
+Paul Irish
+Google
+Chris Wanstrath
+Github
+Mattt Thompson
+Heroku							
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">交换模式空间</h2>
+						<pre><code contenteditable>
+# 通过公司找到这个人, x命令交换当前行到保持空间,
+# n读取下一行到模式空间; 匹配这个模式空间, 假如符合,再交换模式空间，打印
+$/usr/local/bin/sed  -n -e 'x;n' -e '/Whim/{x;p}' source2.txt  
+Hakim El Hattab					
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">拷贝模式空间到保持空间</h2>
+						<pre><code contenteditable>
+# 还是前面的需求.h拷贝模式空间到保持空间, 
+# 如果当前模式空间不匹配, 就拷贝空间到保持空间. 他们会一样
+# 但是当Whim匹配保持空间还是上面一行关于名字的缓存
+$/usr/local/bin/sed  -n -e '/Whim/!h' -e '/Whim/{x;p}' source2.txt  
+Hakim El Hattab			
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">增加模式空间到保持空间</h2>
+						<pre><code contenteditable>
+# 当我根据Whim想显示他的名字和公司名字呢？ - 给保持空间多加一个
+# H表示增加模式空间到保持空间
+$/usr/local/bin/sed -n -e '/Whim/!h' -e '/Whim/{H;x;p}' source2.txt 
+Hakim El Hattab
+Whim
+# 显示的好看一点
+$/usr/local/bin/sed -n -e '/Whim/!h' -e '/Whim/{H;x;s/\n/:/;p}' source2.txt 
+Hakim El Hattab:Whim
+		
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">拷贝保持空间到模式空间</h2>
+						<pre><code contenteditable>
+# 还是前面的需求.g拷贝保持空间到模式空间
+$/usr/local/bin/sed  -n -e '/Whim/!h' -e '/Whim/{g;p}' source2.txt   
+Hakim El Hattab
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">增加保持空间到模式空间</h2>
+						<pre><code contenteditable> 
+# 前面的前面, 输出是Hakim El Hattab:Whim 怎么样翻转呢？
+# G就是反向的
+$/usr/local/bin/sed -n -e '/Whim/!h' -e '/Whim/{G;s/\n/:/;p}' source2.txt  
+Whim:Hakim El Hattab		
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">增加下一行到模式空间</h2>
+						<pre><code contenteditable> 
+$/usr/local/bin/sed -e '{N;s/\n/:/}' source2.txt
+Ian Bicking:Mozilla
+Hakim El Hattab:Whim
+Paul Irish:Google
+Chris Wanstrath:Github
+Mattt Thompson:Heroku
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">label</h2>
+						<pre><code contenteditable>
+# 给匹配Github的行,在使用名字:公司的前面加一个*, 
+#只有匹配Github的模式空间和保持空间才会执行s/^/*/
+$cat label.sed 
+#!/usr/local/bin/sed -nf
+h;n;H;x
+s/\n/:/
+/Github/!b end
+s/^/*/
+:end p
+$chmod u+x label.sed
+./label.sed source2.txt
+Ian Bicking:Mozilla
+Hakim El Hattab:Whim
+Paul Irish:Google
+*Chris Wanstrath:Github
+Mattt Thompson:Heroku
+						</code></pre>
+					</section>
+					
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+							# 把mac地址的冒号替换掉
+							"130531170341903612","259594",2013-05-31T09:04:25Z,"1c:b0:94:b2:85:bd"
+						</code></pre>
+					<ol>
+						<li class="fragment dongwmcsm">sed "s/\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\)/\1\2\3\4\5\6/"</li>
+						<li class="fragment dongwmcsm">sed "s/\(.*\):\(.*\):\(.*\):\(.*\):\(.*\):\(.*\)/\1\2\3\4\5\6/"</li>
+						<li class="fragment dongwmcsm">sed -e "s/T\(.*\):\(.*\):\(.*\)Z/\1#\2#\3/" -e "s/://g" -e "s/#/:/g"</li>
+					</ol>
+				</section>
+				<section>
+					<h2 class="dongwmtitle dongwmgreen dongwmcsm">(三)awk</h2>
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen">学完本章的后果</h2>
+					<ol>
+						<li class="fragment dongwmcsm">获取来连接mongodb的各服务器产生的连接数</li>
+						<li class="fragment dongwmcsm">获取nginx日志ip访问数在一个小时里面,从多到少的总次数排行(排行用到了sort)</li>
+						<li class="fragment dongwmcsm">打印question_awk3.txt包含Addy和Mattt之间的行</li>
+						<li class="fragment dongwmcsm">不使用sort过滤重复行</li>
+						<li class="fragment dongwmcsm">将2个文件合并成一行,但username不一定在2个文件同一行</li>
+						<li class="fragment dongwmcsm">输出2个文件1中有,2中没有的行</li>
+						<li class="fragment dongwmcsm">这是什么意思: gawk -vcmd='ls -l' 'BEGIN{while ( (cmd | getline var) > 0) {print var} close(cmd)}'</li>
+					</ol>
+				</section>
+				<section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">语法1</h2>
+						<pre><code contenteditable>
+awk -Fs '/pattern/ {action}' input-file
+#or
+awk -Fs '{action}' intput-file
+# -F表示设置分隔符,不指定就是默认为空字符
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 用:分割，查找匹配mail的行并且打印冒号分割后的第一部分
+awk -F: '/mail/ {print $1}' /etc/passwd
+_mailman
+_clamav
+_amavisd
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">awk数据结构</h2>
+						<pre><code contenteditable>
+# 1 BEGIN { awk-commands } 在执行awk body之前执行这个awk-commands,而且只一次
+# 2 /pattern/ {action} body部分，也就是awk要执行的主体,比如十行,那么这个主体就调用10次
+# 3 END { awk-commands } 在执行完body之后执行,也是只一次
+$awk 'BEGIN { FS=":";print "---header---" } /mail/ {print $1} \
+END { print "---footer---"}' /etc/passwd
+---header---
+_mailman
+_clamav
+_amavisd
+---footer---
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">awk数据结构</h2>
+						<pre><code contenteditable>
+# 1 BEGIN { awk-commands } 在执行awk body之前执行这个awk-commands,而且只一次
+# 2 /pattern/ {action} body部分，也就是awk要执行的主体,比如十行,那么这个主体就调用10次
+# 3 END { awk-commands } 在执行完body之后执行,也是只一次
+$awk 'BEGIN { FS=":";print "---header---" } /mail/ {print $1} \
+END { print "---footer---"}' /etc/passwd
+---header---
+_mailman
+_clamav
+_amavisd
+---footer---
+# 当然可以只有其中一种或者集中数据结构
+awk -F: 'BEGIN { print "UID"} { print $3 }' /etc/passwd |\
+sed -e '/^$/ d'|head -2
+UID
+-2
+$ awk 'BEGIN { print "Hello World!" }'
+Hello World!
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">源码2</h2>
+						<pre><code contenteditable>
+# 这是一个文件,分别是id, 描述, 价钱和库存
+$cat items.txt 
+101,HD Camcorder,Video,210,10
+102,Refrigerator,Appliance,850,2
+103,MP3 Player,Audio,270,15
+104,Tennis Racket,Sports,190,20
+105,Laser Printer,Office,475,5
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">源码3</h2>
+						<pre><code contenteditable>
+# 这是一个销售数据,分别是id和1-6月的销售情况
+$cat items-sold.txt
+101 2 10 5 8 10 12
+102 0 1 4 3 0 2
+103 10 6 11 20 5 13
+104 2 3 4 0 6 5
+105 10 2 5 7 12 6
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">print</h2>
+						<pre><code contenteditable> 
+# 默认print就是打印文件全文到终端
+$awk '{print}' source.txt
+# 下面是通过,分割,输出第二段。$0表示全行,类似shell用法
+$awk -F ',' '{print $2}' source.txt
+Ian Bicking
+Hakim El Hattab
+Paul Irish
+Addy Osmani
+Chris Wanstrath
+Mattt Thompson
+Ask Solem Hoel
+# or
+$awk -F "," '{print $2}' source.txt
+$awk -F, '{print $2}' source.txt
+# 一个格式化更好看些的效果
+awk -F ',' 'BEGIN \                         
+{ print "-------------\nName\tComp\n-------------"} \
+{ print $2,"\t",$3;} \  
+END { print "-------------"; }' source.txt 
+-------------
+Name	Comp
+-------------
+Ian Bicking 	 Mozilla
+Hakim El Hattab 	 Whim
+Paul Irish 	 Google
+Addy Osmani 	 Google
+Chris Wanstrath 	 Github
+Mattt Thompson 	 Heroku
+Ask Solem Hoel 	 VMware
+-------------
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">模式匹配</h2>
+						<pre><code contenteditable>
+# 用逗号做分隔符, 打印第二和第三列
+$awk -F ',' '/Whim/ {print $2, $3}' source.txt
+Hakim El Hattab Whim
+# 可以加点格式化语句
+$awk -F ',' '/Whim/ {print "Whim\"s name:", $2}' source.txt
+Whim"s name: Hakim El Hattab
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk内置变量 - FS</h2>
+						<pre><code contenteditable>
+$awk -F ',' '{print $2, $3}' source.txt  
+Ian Bicking Mozilla
+Hakim El Hattab Whim
+Paul Irish Google
+Addy Osmani Google
+Chris Wanstrath Github
+Mattt Thompson Heroku
+Ask Solem Hoel VMware
+# 可以使用内置的FS - 输入字段分隔符 实现相同的功能
+$awk 'BEGIN {FS=","} {print $2, $3}' source.txt
+# 先看一个文件
+$cat source-multiple-fs.txt 
+101,Ian Bicking:Mozilla%
+102,Hakim El Hattab:Whim%
+103,Paul Irish:Google%
+104,Addy Osmani:Google%
+105,Chris Wanstrath:Github%
+106,Mattt Thompson:Heroku%
+107,Ask Solem Hoel:VMware%
+# 发现上面的分隔符有三种:逗号分号和百分号,这样就可以这样使用
+# awk 'BEGIN {FS="[,:%]"} {print $2, $3}' source-multiple-fs.txt
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk内置变量 - OFS</h2>
+						<pre><code contenteditable>
+$awk -F ',' '{print $2, ":", $3}' source.txt 
+Ian Bicking : Mozilla
+Hakim El Hattab : Whim
+Paul Irish : Google
+Addy Osmani : Google
+Chris Wanstrath : Github
+Mattt Thompson : Heroku
+Ask Solem Hoel : VMware
+# 其实可以用内置的OFS - 输出字段分隔符
+$awk -F ',' 'BEGIN { OFS=":" } { print $2, $3 }' source.txt
+					</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk内置变量 - RS</h2>
+						<pre><code contenteditable>
+$cat source-one-line.txt 
+1,one:2,two:3,three:4,four
+# 现在我想分割成(1，one),(2, two)这样的效果
+$awk -F, '{print $2}' source-one-line.txt 
+one:2
+# 这个没有实现我想要的效果
+# 使用RS - 记录分隔符, 他能帮你把单行内容先分割然后再按-F分割
+$awk -F, 'BEGIN { RS=":" } { print $2 }' source-one-line.txt
+one
+two
+three
+four
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk内置变量 - ORS</h2>
+						<pre><code contenteditable>
+# RS是输入, ORS就是输出
+$awk 'BEGIN { FS=","; OFS="\n";ORS="\n---\n" } \
+{print $1,$2,$3}' source.txt|head -8
+101
+Ian Bicking
+Mozilla
+---
+102
+Hakim El Hattab
+Whim
+---						
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk内置变量 - NR</h2>
+						<pre><code contenteditable>
+# NR是记录的数目
+$awk 'BEGIN {FS=","} \
+{print "Emp Id of record number",NR,"is",$1;} \
+END {print "Total number of records:",NR}' source.txt
+Emp Id of record number 1 is 101
+Emp Id of record number 2 is 102
+Emp Id of record number 3 is 103
+Emp Id of record number 4 is 104
+Emp Id of record number 5 is 105
+Emp Id of record number 6 is 106
+Emp Id of record number 7 is 107
+Total number of records: 7		
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk内置变量 - FILENAME,FNR</h2>
+						<pre><code contenteditable>
+# FILENAME显示了当前文件, FNR关联到当前文件的记录数
+awk 'BEGIN {FS=","} \
+{print FILENAME ": record number",FNR,"is",$1;} \
+END {print "Total number of records:",NR}' \
+source.txt source-multiple-fs.txt
+source.txt: record number 1 is 101
+source.txt: record number 2 is 102
+source.txt: record number 3 is 103
+source.txt: record number 4 is 104
+source.txt: record number 5 is 105
+source.txt: record number 6 is 106
+source.txt: record number 7 is 107
+source-multiple-fs.txt: record number 1 is 101
+source-multiple-fs.txt: record number 2 is 102
+source-multiple-fs.txt: record number 3 is 103
+source-multiple-fs.txt: record number 4 is 104
+source-multiple-fs.txt: record number 5 is 105
+source-multiple-fs.txt: record number 6 is 106
+source-multiple-fs.txt: record number 7 is 107
+Total number of records: 14
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">awk变量</h2>
+						<pre><code contenteditable>
+# 变量支持数字,字符和下划线
+# 这个文件多加了一列star数, 现在我想统计整个文件的star
+$cat source-star.txt
+101,Ian Bicking,Mozilla,1204
+102,Hakim El Hattab,Whim,4029
+103,Paul Irish,Google,7200
+104,Addy Osmani,Google,2201
+105,Chris Wanstrath,Github,1002
+106,Mattt Thompson,Heroku,890
+107,Ask Solem Hoel,VMware,2109
+# 使用awk的变量,在begin的时候声明total,在body体里面
+# 累加total值，在end里面打印
+$cat total-star.awk 
+BEGIN {
+    FS=",";
+    total=0; }
+{
+ print $2 "'s star is: " $4;
+ total=total+$4
+} END {
+    print "---\nTotal star = *"total;
+}
+awk -f total-star.awk source-star.txt
+Ian Bicking's star is: 1204
+Hakim El Hattab's star is: 4029
+Paul Irish's star is: 7200
+Addy Osmani's star is: 2201
+Chris Wanstrath's star is: 1002
+Mattt Thompson's star is: 890
+Ask Solem Hoel's star is: 2109
+---
+Total star = *18635
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">自增长/减少</h2>
+						<pre><code contenteditable>
+# 可以使用++或者--,但是注意前后
+$awk -F, '{print --$4}' source-star.txt
+1203
+4028
+7199
+2200
+1001
+889
+2108
+$awk -F, '{print $4--}' source-star.txt 
+# 咦 竟然没有变
+1204
+4029
+7200
+2201
+1002
+890
+2109
+# 想达到--$4的目的就得这样
+$awk -F ',' '{$4--; print $4}' source-star.txt
+1203
+4028
+7199
+2200
+1001
+889
+2108
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">字符串操作</h2>
+						<pre><code contenteditable>
+$cat string.awk
+BEGIN {
+    FS=",";
+    OFS=",";
+    string1="GO";
+    string2="OGLE";
+    numberstring="100";
+    string3=string1 string2;
+    print "Concatenate string is:" string3;
+    numberstring=numberstring+1;
+    print "String to number:" numberstring;
+}
+# 字符串会直接相连, 字符串相加会自动转化成数字相加
+$awk -f string.awk 
+Concatenate string is:GOOGLE
+String to number:101
+							
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">复合运算</h2>
+						<pre><code contenteditable>
+$cat assignment.awk
+BEGIN {
+ FS=",";
+ OFS=",";
+ total1 = total2 = total3 = total4 = total5 = 10;
+ total1 += 5; print total1;
+ total2 -= 5; print total2;
+ total3 *= 5; print total3;
+ total4 /= 5; print total4;
+ total5 %= 5; print total5;
+}
+$awk -f assignment.awk
+15
+5
+50
+2
+0							
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">比较操作</h2>
+						<pre><code contenteditable>
+# 只会显示小于1005的行
+$awk -F "," '$4 <= 1005' source-star.txt
+105,Chris Wanstrath,Github,1002
+106,Mattt Thompson,Heroku,890
+$awk -F "," '$1 == 103 {print $2}' source-star.txt 
+Paul Irish
+# 你也可以加多个条件 这里||表示或者  && 表示和
+$awk -F "," '$4 > 3000 || $4 <= 880 {print $2}' source-star.txt
+Hakim El Hattab
+Paul Irish	
+						</code></pre>
+					</section>
+					<section>
+						<h2 class="dongwmtitle dongwmgreen">正则</h2>
+						<pre><code contenteditable>
+# ~ 表示匹配, ！~ 表示不匹配
+$awk -F "," '$3 ~ "Github"' source.txt
+105,Chris Wanstrath,Github
+$awk -F "," '$3 !~ "Google"' source.txt
+101,Ian Bicking,Mozilla
+102,Hakim El Hattab,Whim
+105,Chris Wanstrath,Github
+106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware
+# NF是分割项数目, $NF表示最后一个分割项, 这里是找最后一个分割项是/bin/sh的就会累加n
+$awk -F ':' '$NF ~ /\/bin\/sh/ { n++ }; END { print n \
+}' /etc/passwd
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">if语法</h2>
+						<pre><code contenteditable>
+if (conditional-expression)
+    action
+	
+if (conditional-expression)
+{
+action1;
+action2; }
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 和上面的一个例子一样
+$awk -F "," '{ if ($3 ~ "Github") print $0}' source.txt
+105,Chris Wanstrath,Github
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">if else语法</h2>
+						<pre><code contenteditable>
+if (conditional-expression)
+    action1
+else
+    action2
+# or
+conditional-expression ? action1 : action2 ;
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 打印单行因为%2,奇数取余
+$awk 'ORS=NR%2?",":"\n"' source.txt                    
+101,Ian Bicking,Mozilla,102,Hakim El Hattab,Whim
+103,Paul Irish,Google,104,Addy Osmani,Google
+105,Chris Wanstrath,Github,106,Mattt Thompson,Heroku
+107,Ask Solem Hoel,VMware,
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">while语法</h2>
+						<pre><code contenteditable>
+while(condition)
+    actions
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 把第二列和其之后的每列加起来
+$cat while.awk 
+{
+    i=2; total=0;
+    while (i <= NF) {
+        total = total + $i;
+        i++;
+ }
+    print "Item", $1, ":", total, "quantities sold";
+}
+$awk -f while.awk items-sold.txt
+Item 101 : 47 quantities sold
+Item 102 : 10 quantities sold
+Item 103 : 65 quantities sold
+Item 104 : 20 quantities sold
+Item 105 : 42 quantities sold
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">do while语法</h2>
+						<pre><code contenteditable>
+# do while至少会执行一次
+do
+action
+while(condition)
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 用do-while方法实现上一次的例子
+$cat dowhile.awk 
+{
+    i=2; total=0;
+ do
+ {
+     total = total + $i;
+     i++;
+ } while (i <= NF)
+ print "Item", $1, ":", total, "quantities sold";
+}
+$awk -f dowhile.awk items-sold.txt
+Item 101 : 47 quantities sold
+Item 102 : 10 quantities sold
+Item 103 : 65 quantities sold
+Item 104 : 20 quantities sold
+Item 105 : 42 quantities sold
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">for语法</h2>
+						<pre><code contenteditable>
+for(initialization;condition;increment/decrement)
+actions
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+$echo "1 2 3 4" | awk '{ for (i = 1; i <= NF; i++) total = total+$i }; \
+END { print total }'  
+10
+# 再来个for版本的例子
+$cat for.awk 
+{
+    total=0;
+    for (i=2; i <= NF; i++)
+        total = total + $i;
+    print "Item", $1, ":", total, "quantities sold";
+}
+$awk -f for.awk items-sold.txt
+Item 101 : 47 quantities sold
+Item 102 : 10 quantities sold
+Item 103 : 65 quantities sold
+Item 104 : 20 quantities sold
+Item 105 : 42 quantities sold
+						</code></pre>
+					</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">break,continue,exit</h2>
+						<pre><code contenteditable>
+# 程序一直运行打印Iteration,并且累加x,直到x等于10停止程序-break
+$ awk 'BEGIN{
+x=1;
+while(1)
+{
+print "Iteration";
+if ( x==10 )
+break;
+x++;
+}}'
+# x从1到10, 如果x等于5 直接直接累加x而不打印
+$awk 'BEGIN{
+x=1;
+while(x<=10)
+{
+if(x==5){
+x++;
+continue;
+}
+print "Value of x",x;x++;
+}
+}'
+# x从1到10,当x等于5的时候程序直接退出
+$awk 'BEGIN{
+x=1;
+while(x<=10)
+{
+if(x==5){
+exit;}
+print "Value of x",x;x++;
+}
+}'
+						</code></pre>
+					</section>
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen dongwmcsm">关联数组</h3>
+						<pre><code contenteditable>
+# awk 的关联数组中item[101]和item["101"]意义一样
+$awk 'BEGIN { item[101]="Github"; print item["101"]}' 
+Github
+# 可以用in检验是否包含本项
+$awk 'BEGIN { item[101]="a"; if ( 101 in item ) print "Has 101"}'
+Has 101
+# 还可以使用for循环读取列表
+$cat array-for-loop.awk
+BEGIN {
+    item[101]="Github";
+    item[21]="Google";
+    for (x in item)
+        print item[x];
+}
+$awk -f array-for-loop.awk
+Github
+Google
+# 多维数组, delete可以删除元素.PS item[2,1]这样的格式有问题
+# 因为会被翻译成2#2("2\0342"),假设要设置分隔符可以使用SUBSEP=",";
+$awk 'BEGIN { item["1,1"]="Github"; item["1,2"]="Google"; \
+item["2,1"]="Whim"; delete item["2,1"];
+for (x in item)
+print "Index",x,"contains",item[x];}'
+Index 1,1 contains Github
+Index 1,2 contains Google
+
+						</code></pre>
+				</section>
+				<section>
+						<h3 class="dongwmtitle dongwmgreen dongwmcsm">数组排序</h2>
+						<pre><code contenteditable>
+# 这里需要gnu awk了 使用了asort排序
+$cat asort.awk 
+BEGIN {
+ item[101]="Github";
+ item[22]="Whim";
+ item[50]="Google";
+ print "------Before asort------"
+ for (x in item)
+     print "Index",x,"contains",item[x];
+ total = asort(item);
+ print "------After asort------"
+ for (x in item)
+     print "Index",x,"contains",item[x];
+ print "Return value from asort:", total;
+}
+
+$gawk -f asort.awk
+------Before asort------
+Index 22 contains Whim
+Index 50 contains Google
+Index 101 contains Github
+------After asort------
+Index 1 contains Github
+Index 2 contains Google
+Index 3 contains Whim
+Return value from asort: 3
+# 大家请注意上面的例子,排序后已经忘记了原来item的index位置
+# 而asorti可以帮助你法记录这个位置
+$cat asorti.awk
+BEGIN {
+ item[101]="Github";
+ item[22]="Whim";
+ item[50]="Google";
+ print "----- Function: asort -----"
+ total = asort(item,itemdesc);
+ for (i=1; i<= total; i++)
+    print "Index",i,"contains",itemdesc[i];
+ print "----- Function: asorti -----"
+ total = asorti(item,itemabbr);
+ for (i=1; i<= total; i++)
+     print "Index",i,"contains",itemabbr[i];
+}
+$gawk -f asorti.awk
+----- Function: asort -----
+Index 1 contains Github
+Index 2 contains Google
+Index 3 contains Whim
+----- Function: asorti -----
+Index 1 contains 101
+Index 2 contains 22
+Index 3 contains 50
+						</code></pre>
+				</section>
+				<section>
+						<h3 class="dongwmtitle dongwmgreen dongwmcsm">格式化打印</h2>
+							<pre><code contenteditable>
+# \n是换行
+$awk 'BEGIN { printf "Line 1\nLine 2\n" }'
+Line 1
+Line 2
+# \t是tab
+$awk 'BEGIN \
+quote> { printf "Field 1\t\tField 2\tField 3\tField 4\n" }'
+Field 1		Field 2	Field 3	Field 4
+# \v是垂直tab
+$awk 'BEGIN \
+{ printf "Field 1\vField 2\vField 3\vField 4\n" }'
+Field 1
+    Field 2
+       Field 3
+	  Field 4
+# %s字符串; %c单个字符; %d数字; %f浮点数......
+$cat printf-width.awk 
+BEGIN {
+FS=","
+printf "%3s\t%10s\t%10s\t%5s\t%3s\n",
+    "Num","Description","Type","Price","Qty"
+printf "-----------------------------------------------------\n"
+}
+{
+    printf "%3d\t%10s\t%10s\t%g\t%d\n", $1,$2,$3,$4,$5
+}
+awk -f printf-width.awk items.txt 
+Num	Description	      Type	Price	Qty
+-----------------------------------------------------
+101	HD Camcorder	     Video	210	10
+102	Refrigerator	 Appliance	850	2
+103	MP3 Player	     Audio	270	15
+104	Tennis Racket	    Sports	190	20
+105	Laser Printer	    Office	475	5
+							</code></pre>
+				</section>
+				<section>
+						<h3 class="dongwmtitle dongwmgreen dongwmcsm">内置函数</h2>
+							<pre><code contenteditable>
+# int - 将数字转换成整形, 类似的函数还有sqrt, sin, cos...
+$awk 'BEGIN {print int(4.1);print int(-6.22);print int(strings)}'
+4
+-6
+0
+# rand - 随机0-1的数字; srand -初始化随机数的初始值
+$cat srand.awk 
+BEGIN {
+    srand(5);
+    count=0;
+    max=30;
+    while (count < 5) {
+        # 随机数范围为5-30
+        rnd = int(rand() * max);
+        print rnd;
+        count++;
+    }
+}
+# 使用osx的awk随机范围不对
+$gawk -f srand.awk
+19
+9
+21
+8
+13
+# index - 所查字符在字符串中的位置,没找到会返回0
+awk 'BEGIN{str="This is a test"; print index(str, "a"); print index(str, "y")}'
+9
+0
+# length - 字符串的长度
+$awk -F, '{print length($0)}' source.txt
+23
+24
+21
+22
+26
+25
+25
+# split - 分片 PS:使用awk分片的顺序有问题;
+# split第一个参数是要分割的内容,第二个是分割后的结果保存的数组,第三个是使用的分隔符
+$echo "101 arg1:arg2:arg3"|gawk '{split($2,out,":"); for (x in out) print out[x];}'
+arg1
+arg2
+arg3
+# substr - 取字符串范围内容;
+# 第一个参数是要取的内容, 第二个是开始位置(从1开始),第三个是要取的长度
+$echo "This is test"|awk '{print substr($3,2,2);}'
+es
+# sub - 替换原来的字符串,但是只替换第一个符合项; gsub - 替换全部选择项
+$awk 'BEGIN{str="ThIs is test"; sub("[Ii]s","e", str); print str;}'
+The is test
+$awk 'BEGIN{str="ThIs is test"; gsub("[Ii]s","e", str); print str;}'
+The e test
+# match - 返回某子字符串是否匹配了某字符串;
+# RSTART - awk 自带变量返回匹配的开始位置
+# RLENGTH - awk 自带变量返回匹配串的长度
+$awk 'BEGIN{str="This is test"; if (match(str, "test")) {print substr(str,RSTART,RLENGTH)}}'  
+# tolower/toupper - 把字符串都变成小写/大写
+$awk 'BEGIN{str="This is test"; print tolower(str); print toupper(str);}'
+this is test
+THIS IS TEST
+# ARGC - 参数的数量; ARGV参数的数组
+$cat arguments.awk
+BEGIN {
+    print "ARGC=",ARGC
+    for (i = 0; i < ARGC; i++)
+  print ARGV[i]
+}
+							</code></pre>
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen dongwmcsm">内置变量</h2>
+						<pre><code contenteditable>
+# ENVIRON - 系统环境变量
+$cat environ.awk
+BEGIN {
+ OFS="="
+ for(x in ENVIRON)
+     print x,ENVIRON[x];
+}
+# IGNORECASE - 设置为1 忽略大小写
+$gawk 'BEGIN{IGNORECASE=1} /github/{print}' source.txt
+105,Chris Wanstrath,Github
+						</code></pre>
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen dongwmcsm">位运算</h2>
+						<pre><code contenteditable>
+$cat bits.awk
+BEGIN {
+ number1=15
+ number2=25
+ print "AND: " and(number1,number2);
+ print "OR: " or(number1,number2)
+ print "XOR: " xor(number1,number2)
+ print "LSHIFT: " lshift(number1,2)
+ print "RSHIFT: " rshift(number1,2)
+}
+$gawk -f bits.awk
+AND: 9
+OR: 31
+XOR: 22
+LSHIFT: 60
+RSHIFT: 3					
+						</code></pre>
+				</section>
+					<section>
+						<h3 class="dongwmtitle dongwmgreen">自定义函数语法</h2>
+						<pre><code contenteditable>
+function fn-name(parameters)
+{
+ function-body
+}
+						</code></pre>
+						<h3 class="dongwmtitle dongwmgreen">例子</h2>
+						<pre><code contenteditable>
+# 函数的位置不重要
+$cat function-debug.awk 
+function mydebug (message) {
+    print ("Debug Time:" strftime("%a %b %d %H:%M:%S %Z %Y", systime()))
+    print (message)
+}
+{
+    mydebug($NF)
+}
+$gawk -f function-debug.awk source.txt
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Bicking,Mozilla
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Hattab,Whim
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Irish,Google
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Osmani,Google
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Wanstrath,Github
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Thompson,Heroku
+Debug Time:Wed Dec 11 22:14:43 CST 2013
+Hoel,VMware
+						</code></pre>
+					</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen dongwmcsm">系统调用</h2>
+						<pre><code contenteditable>
+# 使用system函数可以调用shell命令
+$awk 'BEGIN { system("date") }'
+Wed Dec 11 22:24:27 CST 2013
+# systime 和 strftime上面见过了.处理时间和格式化时间
+$gawk 'BEGIN { print strftime("%c",systime()) }'
+Wed Dec 11 22:25:32 2013
+						</code></pre>
+				</section>
+				<section>
+					<h2 class="dongwmtitle dongwmgreen dongwmcsm">(四)awk高级话题</h2>
+				</section>
+				<section>
+					<h3 class="dongwmtitle dongwmgreen dongwmcsm">getline</h2>
+						<pre><code contenteditable>
+# awk首先读入一行，接着处理getline函数再获得一行....下面显示的就是奇数行
+$awk -F"," '{print $0;getline;}' source.txt 
+101,Ian Bicking,Mozilla
+103,Paul Irish,Google
+105,Chris Wanstrath,Github
+107,Ask Solem Hoel,VMware
+# 我们使用getline 并把这行变量赋值给tmp
+$awk -F, '{getline tmp; print "$0->", $0; print "tmp->", tmp;}' source.txt
+$0-> 101,Ian Bicking,Mozilla
+tmp-> 102,Hakim El Hattab,Whim
+$0-> 103,Paul Irish,Google
+tmp-> 104,Addy Osmani,Google
+$0-> 105,Chris Wanstrath,Github
+tmp-> 106,Mattt Thompson,Heroku
+$0-> 107,Ask Solem Hoel,VMware
+tmp-> 106,Mattt Thompson,Heroku
+# 执行外部程序, close可关闭管道,比如这里必须是`|getline`之前的命令
+$awk 'BEGIN{"date"| getline;close("date");print "Timestamp:" $0}'
+Timestamp:Wed Dec 11 22:41:52 CST 2013
+# or
+$awk 'BEGIN{"date"| getline timestamp;close("date");print "Timestamp:" timestamp}'
+Timestamp:Wed Dec 11 22:44:08 CST 2013
+						</code></pre>
+						awk '{a[NR]=$0}; {print a[FNR], $0}'  txt1 txt2
+				</section>
+				<section>
+					<h1 class="exclusive">「谢谢」</h1>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: Reveal.getQueryHash().theme,
+				transition: Reveal.getQueryHash().transition || 'default',
+				dependencies: [
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

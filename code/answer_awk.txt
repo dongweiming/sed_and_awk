@@ -1,0 +1,6 @@
+1. netstat -nat |grep 27018|awk '{print $5}'|awk -F ':' '{a[$1]++} END {for (j in a) print a[j], j}'
+2. awk '{a[sprintf("%s %s", substr($4,2,14),$1)]++} END{for(i in a){print "ip: " i,"count: " a[i]}}' access.log |sort -rnk 5
+3. awk '/Addy/{ P=1; next } /Mattt/ {exit} P' question_awk3.txt
+4. awk '!a[$1]++' question_awk4.txt
+5. awk '{a[$1]=$2}NR>FNR{print $1,a[$1], a[$2]}'  question_awk5_2.txt question_awk5_1.txt
+6. awk 'NR == FNR{a[$0]} !($0 in a)'  question_awk6_2.txt question_awk6_1.txt
