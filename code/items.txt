@@ -1,0 +1,5 @@
+101,HD Camcorder,Video,210,10
+102,Refrigerator,Appliance,850,2
+103,MP3 Player,Audio,270,15
+104,Tennis Racket,Sports,190,20
+105,Laser Printer,Office,475,5

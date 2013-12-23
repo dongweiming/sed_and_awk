@@ -1,0 +1,1 @@
+reading /usr/local/bin directory

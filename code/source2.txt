@@ -1,0 +1,10 @@
+Ian Bicking
+Mozilla
+Hakim El Hattab
+Whim
+Paul Irish
+Google
+Chris Wanstrath
+Github
+Mattt Thompson
+Heroku
