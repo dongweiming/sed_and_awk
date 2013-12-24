@@ -227,3 +227,7 @@ body {
   left: 160px;
   bottom: -250px;
 }
+
+.reveal iframe {
+  margin-bottom: -150px;
+}
