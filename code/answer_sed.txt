@@ -1,3 +1,6 @@
-1 echo "This is 123"|sed "s/[0-9]\{3\}/[&]/"
-4 echo "This is UPPER"|/usr/local/bin/sed "s/\(.*\) \(.*\) \(.*\)/\U\2,\E\u\1,\E\L\3/"
-6 sed -n '1!G;h;$p'
+1. echo "This is 123"|sed "s/[0-9]\{3\}/[&]/"
+2. 打印匹配2和她后面的2行
+3. 把匹配2的行改成4
+4. echo "This is UPPER"|/usr/local/bin/sed "s/\(.*\) \(.*\) \(.*\)/\U\2,\E\u\1,\E\L\3/"
+5. 把前面的哪行叠加到本行
+6. sed -n '1!G;h;$p'

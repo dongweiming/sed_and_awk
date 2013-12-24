@@ -40,7 +40,7 @@
 					<h3 class="dongwmtitle dongwmgreen">学完本章的后果</h2>
 					<ol>
 						<li class="fragment dongwmcsm">把123变成[123](不要sed "s/\([0-9]\{3\}\)/[\1]/")</li>
-						<li class="fragment dongwmcsm">这是什么意思: echo "1\n2\n3"|sed -n "/2/, +2p"</li>
+						<li class="fragment dongwmcsm">这是什么意思: echo "1\n2\n3\n4"|sed -n "/2/, +2p"(gnu sed)</li>
 						<li class="fragment dongwmcsm">这是什么意思: echo "1\n2\n3"|sed '2 c 4' (gnu sed)</li>
 						<li class="fragment dongwmcsm">把This is UPPER变成IS,This,upper(gnu sed)</li>
 						<li class="fragment dongwmcsm">这是什么意思: sed 'H;x;s/^\(.*\)\n\(.*\)/\2\1/'</li>
