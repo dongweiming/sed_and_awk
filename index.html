@@ -196,7 +196,8 @@ $/usr/local/bin/sed '1~2 d' source.txt
 104,Addy Osmani,Google
 106,Mattt Thompson,Heroku
 # 删除符合Paul到Addy的行
-$sed '/Paul/,/Addy/, d' source.txt
+$sed '/Paul/,/Addy/d' source.txt
+101,Ian Bicking,Mozilla
 102,Hakim El Hattab,Whim
 105,Chris Wanstrath,Github
 106,Mattt Thompson,Heroku
@@ -273,7 +274,7 @@ $sed 's/\(.*\)/ls -l \1|head -1/' files.txt
 ls -l /etc/passwd|head -1
 ls -l /etc/group|head -1
 # 我要用sed执行这个字符串命令了 无奈..mac上得sed都不行
-dongwm@bj-social-201:~$ sed 's/^/ls -l /e' files.txt
+dongwm@bj-1:~$ sed 's/^/ls -l /e' files.txt
 -rw-r--r-- 1 root root 1627 Oct 14 14:30 /etc/passwd
 -rw-r--r-- 1 root root 807 Oct 14 14:30 /etc/group
 # sed分隔符不只可以使用'/'
@@ -287,9 +288,9 @@ $sed 's!/usr/local/bin!/usr/bin!' path.txt
 						<h3 class="dongwmtitle dongwmgreen">替换覆盖</h2>
 						<pre><code contenteditable>
 sed '{
-quote> s/Google/Github/
-quote> s/Git/git/ 
-quote> }' source.txt 
+s/Google/Github/
+s/Git/git/ 
+}' source.txt 
 101,Ian Bicking,Mozilla
 102,Hakim El Hattab,Whim
 103,Paul Irish,github
@@ -435,7 +436,7 @@ $cat testscript.sed
 /root/ p
 /nobody/ p
 $chmod u+x testscript.sed
-$/testscript.sed /etc/passwd 
+$./testscript.sed /etc/passwd 
 nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
 root:*:0:0:System Administrator:/var/root:/bin/sh
 daemon:*:1:1:System Services:/var/root:/usr/bin/false
@@ -445,7 +446,7 @@ _cvmsroot:*:212:212:CVMS Root:/var/empty:/usr/bin/false
 					<section>
 						<h3 class="dongwmtitle dongwmgreen">sed修改源文件和备份</h2>
 						<pre><code contenteditable>
-							#-i会修改源文件,但是可以同时使用bak备份
+#-i会修改源文件,但是可以同时使用bak备份
 $sed -ibak 's/Ian/IAN/' source.txt 
 # or
 sed --in-place=bak 's/Ian/IAN/' source.txt 
@@ -509,11 +510,11 @@ $/usr/local/bin/sed '/Paul/ c 108,Donald Stufft, Nebula' source.txt
 					<section>
 						<h3 class="dongwmtitle dongwmgreen">sed其他</h2>
 						<pre><code contenteditable>
-							# -l会显示隐藏字符比如'\t', = 可以显示行号
-							$sed -l = source.txt
-							# y或翻译你要转换的字符,这里I会转化成i，B转换成b
-							$sed 'y/IB/ib/' source.txt |head -1
-							101,iAN bicking,Mozilla
+# -l会显示隐藏字符比如'\t', = 可以显示行号
+$sed -l = source.txt
+# y或翻译你要转换的字符,这里I会转化成i，B转换成b
+$sed 'y/IB/ib/' source.txt |head -1
+101,iAN bicking,Mozilla
 							
 						</code></pre>
 					</section>
@@ -626,8 +627,8 @@ Mattt Thompson:Heroku
 				<section>
 					<h3 class="dongwmtitle dongwmgreen">例子</h2>
 						<pre><code contenteditable>
-							# 把mac地址的冒号替换掉
-							"130531170341903612","259594",2013-05-31T09:04:25Z,"1c:b0:94:b2:85:bd"
+# 把mac地址的冒号替换掉
+"130531170341903612","259594",2013-05-31T09:04:25Z,"1c:b0:94:b2:85:bd"
 						</code></pre>
 					<ol>
 						<li class="fragment dongwmcsm">sed "s/\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\):\([0-9a-zA-Z]\{2\}\)/\1\2\3\4\5\6/"</li>
@@ -666,21 +667,6 @@ awk -F: '/mail/ {print $1}' /etc/passwd
 _mailman
 _clamav
 _amavisd
-						</code></pre>
-					</section>
-					<section>
-						<h3 class="dongwmtitle dongwmgreen">awk数据结构</h2>
-						<pre><code contenteditable>
-# 1 BEGIN { awk-commands } 在执行awk body之前执行这个awk-commands,而且只一次
-# 2 /pattern/ {action} body部分，也就是awk要执行的主体,比如十行,那么这个主体就调用10次
-# 3 END { awk-commands } 在执行完body之后执行,也是只一次
-$awk 'BEGIN { FS=":";print "---header---" } /mail/ {print $1} \
-END { print "---footer---"}' /etc/passwd
----header---
-_mailman
-_clamav
-_amavisd
----footer---
 						</code></pre>
 					</section>
 					<section>
@@ -1239,7 +1225,6 @@ BEGIN {
  print "------After asort------"
  for (x in item)
      print "Index",x,"contains",item[x];
- print "Return value from asort:", total;
 }
 
 $gawk -f asort.awk
@@ -1251,9 +1236,8 @@ Index 101 contains Github
 Index 1 contains Github
 Index 2 contains Google
 Index 3 contains Whim
-Return value from asort: 3
 # 大家请注意上面的例子,排序后已经忘记了原来item的index位置
-# 而asorti可以帮助你法记录这个位置
+# 而asorti可以帮助你记录这个位置
 $cat asorti.awk
 BEGIN {
  item[101]="Github";
@@ -1288,7 +1272,7 @@ Line 1
 Line 2
 # \t是tab
 $awk 'BEGIN \
-quote> { printf "Field 1\t\tField 2\tField 3\tField 4\n" }'
+{ printf "Field 1\t\tField 2\tField 3\tField 4\n" }'
 Field 1		Field 2	Field 3	Field 4
 # \v是垂直tab
 $awk 'BEGIN \
@@ -1503,7 +1487,6 @@ Timestamp:Wed Dec 11 22:41:52 CST 2013
 $awk 'BEGIN{"date"| getline timestamp;close("date");print "Timestamp:" timestamp}'
 Timestamp:Wed Dec 11 22:44:08 CST 2013
 						</code></pre>
-						awk '{a[NR]=$0}; {print a[FNR], $0}'  txt1 txt2
 				</section>
 				<section>
 					<h1 class="exclusive">「谢谢」</h1>
