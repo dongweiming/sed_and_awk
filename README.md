@@ -1,7 +1,7 @@
 sed_and_awk
 ===========
 
-A online presentation for sed &amp; awk. You can see [http://dongweiming.github.io/sed_and_awk](http://dongweiming.github.io/sed_and_awk)
+An online presentation for sed &amp; awk. You can see [http://dongweiming.github.io/sed_and_awk](http://dongweiming.github.io/sed_and_awk)
 
 How to use
 --------
